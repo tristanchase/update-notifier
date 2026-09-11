@@ -98,7 +98,7 @@ function __print_updates__ {
 }
 
 function __update_cache__ {
-	local mycache=$1 flock="$1.lock"
+	local flock="${_cache_file}.lock"
 	# Now we actually have to do hard computational work to calculate updates.
 	# Let's try to be "nice" about it:
 	renice 10 $$ >/dev/null 2>&1 || true
@@ -109,16 +109,16 @@ function __update_cache__ {
 	# Ensure that no more than one of these run at a given time
 	#flock -xn "$flock" apt-get -s -o Debug::NoLocking=true upgrade | grep -c ^Inst >$mycache 2>/dev/null
 	#echo "Cache updated"
-	flock -xn "$flock" apt-get -s -o Debug::NoLocking=true upgrade | grep -c ^Inst >$mycache 2>/dev/null &
+	flock -xn "$flock" apt-get -s -o Debug::NoLocking=true upgrade | grep -c ^Inst >"${_cache_file}" 2>/dev/null &
 }
 
 function __update_needed__ {
 	# Checks if we need to update the cache.
 	local mycache=$1
 	# The cache doesn't exist: create it
-	[[ ! -e "$mycache" ]] && __update_cache__ "$mycache"
+	[[ ! -e "${_cache_file}" ]] && __update_cache__ "${_cache_file}"
 
-	d0=$(($(stat -c %Y $mycache 2>/dev/null)-5))
+	d0=$(($(stat -c %Y "${_cache_file}" 2>/dev/null)-5))
 	d1=$(stat -c %Y /var/lib/apt)
 	d2=$(stat -c %Y /var/lib/apt/lists)
 	d3=$(stat -c %Y /var/log/dpkg.log)

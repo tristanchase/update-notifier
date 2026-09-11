@@ -27,17 +27,19 @@ _script_name=$(basename -s .sh "$0")
 
 function __show_help__ {
 	cat << EOF
-Usage: ${_script_name} [OPTIONS] [<arguments>]
+Usage: ${_script_name} [OPTIONS]
 
 Description: 
 
 Options:
-  #-d, --debug	Enable debug mode (disabled for now)
-  -h, --help	Display this help message
+ #-d, --debug		Enable debug mode (disabled for now)
+  -h, --help		Display this help message
+  -p, --print-updates	Update command prompt flag [updates:n]
+  -u, --update-cache	Update the cache file
 
 Examples:
-  ${_script_name} foo
-  ${_script_name} --debug bar
+  ${_script_name} -u
+  ${_script_name} --update-cache
 EOF
 
 exit 2

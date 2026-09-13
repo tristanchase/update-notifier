@@ -29,15 +29,16 @@ function __show_help__ {
 	cat << EOF
 Usage: ${_script_name} [OPTIONS]
 
-Description: Adds an icon [updates:n] to command prompt if updates are available
+Description: Adds an icon [updates:n] to the command prompt if updates are
+available. When called with no arguments, the script checks for a cache file
+and updates it if necessary.
 
 Options:
- #-d, --debug		Enable debug mode (disabled for now)
   -h, --help		Display this help message
-  -i, --create-icon	Create command prompt icon [updates:n]
-  -u, --update-cache	Update the cache file
+  -u, --update-cache	Update the cache file now
 
 Examples:
+  ${_script_name}
   ${_script_name} -u
   ${_script_name} --update-cache
 EOF
@@ -126,11 +127,11 @@ function __update_cache__ {
 	renice 10 $$ >/dev/null 2>&1 || true
 	ionice -c3 -p $$ >/dev/null 2>&1 || true
 	flock -xn "${_file_lock}" apt-get -s -o Debug::NoLocking=true upgrade \
-		| grep -c ^Inst >"${_cache_file}" 2>/dev/null &
+		| grep -c ^Inst >" ${_cache_file}" 2>/dev/null &
 }
 
 function __updates_available_icon__ {
-	if [[ -f "${_cache_icon}" ]]; then
+	if [[ -r "${_cache_icon}" ]]; then
 		cat "${_cache_icon}"
 	fi
 }
@@ -147,9 +148,7 @@ function __updates_icon__ {
 # - [ ] refactor: rewrite options using getopt (refactor-options-getopt)
 #shopt -s extglob
 case "${1:-}" in
-#	(-d|--debug) __debugger__ ;;
 	(-h|--help) __show_help__ ; exit 2 ;;
-	(-i|--create-icon) __create_icon__ ;;
 	(-u|--update-cache) __update_cache__ ;;
 	(-*|--*)  printf "%b\n" ""${_script_name}": Option \""${1:-}"\" not recognized."  1>&2 ; __show_help__ ; exit 2  1>&2 ;;
 	#('') printf "%b\n" ""${_script_name}": Argument required." 1>&2 ; __show_help__ ; exit 2  1>&2 ;;

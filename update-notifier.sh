@@ -29,12 +29,12 @@ function __show_help__ {
 	cat << EOF
 Usage: ${_script_name} [OPTIONS]
 
-Description: 
+Description: Adds an icon [updates:n] to command prompt if updates are available
 
 Options:
  #-d, --debug		Enable debug mode (disabled for now)
   -h, --help		Display this help message
-  -p, --print-updates	Update command prompt flag [updates:n]
+  -i, --create-icon	Create command prompt icon [updates:n]
   -u, --update-cache	Update the cache file
 
 Examples:
@@ -82,68 +82,75 @@ _cache_icon="${_cache_path}/updates-available.icon"
 #rm "${_cache_file}"
 
 function __updates_available__ {
-	[[ -r "${_cache_file}" ]] && __print_updates__ "${_cache_file}"
-	__update_needed__ "${_cache_file}"
+	[[ -r "${_cache_file}" ]] && __create_icon__
+	__check_cache__
 }
 
-function __print_updates__ {
-	local u=
-	read u < "$1"
+function __create_icon__ {
+	local _updates_num=
+	read _updates_num < "${_cache_file}"
 
-	if [[ -n "$u" ]]; then
-		if [[ "$u" -gt 0 ]]; then
-			printf "[updates:"$u"]" > "${_cache_icon}"
-		elif [[ "$u" = "0" ]] && [[ -e "${_cache_icon}" ]]; then
+	if [[ -n "$_updates_num" ]]; then
+		if [[ "$_updates_num" -gt 0 ]]; then
+			printf "[updates:"$_updates_num"]" > "${_cache_icon}"
+		elif [[ "$_updates_num" = "0" ]] && [[ -e "${_cache_icon}" ]]; then
 			rm -f "${_cache_icon}"
 		fi
 	fi
 }
 
-function __update_cache__ {
-	local flock="${_cache_file}.lock"
-	# Now we actually have to do hard computational work to calculate updates.
-	# Let's try to be "nice" about it:
-	renice 10 $$ >/dev/null 2>&1 || true
-	ionice -c3 -p $$ >/dev/null 2>&1 || true
-	# These are very computationally intensive processes.
-	# Background this work, have it write to the cache files,
-	# and let the next cache check pick up the results.
-	# Ensure that no more than one of these run at a given time
-	#flock -xn "$flock" apt-get -s -o Debug::NoLocking=true upgrade | grep -c ^Inst >$mycache 2>/dev/null
-	#echo "Cache updated"
-	flock -xn "$flock" apt-get -s -o Debug::NoLocking=true upgrade | grep -c ^Inst >"${_cache_file}" 2>/dev/null &
-}
-
-function __update_needed__ {
-	# Checks if we need to update the cache.
-	local mycache=$1
-	# The cache doesn't exist: create it
-	[[ ! -e "${_cache_file}" ]] && __update_cache__ "${_cache_file}"
-
-	d0=$(($(stat -c %Y "${_cache_file}" 2>/dev/null)-5))
-	d1=$(stat -c %Y /var/lib/apt)
-	d2=$(stat -c %Y /var/lib/apt/lists)
-	d3=$(stat -c %Y /var/log/dpkg.log)
-	now=$(date +%s)
-	delta=$(($now-$d0))
-
-	if [[ $d0 -lt 0 ]] || [[ $d0 -lt $d1 ]] || [[ $d0 -lt $d2 ]] || [[ $d0 -lt $d3 ]] || [[ 3605 -lt $delta ]] ; then
-		__update_cache__
+function __check_cache__ {
+	# Checks if the cache file needs an update
+	# If the cache file doesn't exist, create it
+	if [[ ! -e "${_cache_file}" ]]; then
+	      __update_cache__
+	# else check the mtime of these files
+	else
+		d0=$(($(stat -c %Y "${_cache_file}" 2>/dev/null)-5))
+		d1=$(stat -c %Y /var/lib/apt)
+		d2=$(stat -c %Y /var/lib/apt/lists)
+		d3=$(stat -c %Y /var/log/dpkg.log)
+		now=$(date +%s)
+		delta=$(($now-$d0))
+		# Run the update if any of these conditions is true
+		if [[ $d0 -lt 0 ]] || [[ $d0 -lt $d1 ]] || [[ $d0 -lt $d2 ]] || [[ $d0 -lt $d3 ]] || [[ 3605 -lt $delta ]] ; then
+			__update_cache__
+		fi
 	fi
 }
 
-__updates_available__
+function __update_cache__ {
+	local _file_lock="${_cache_file}.lock"
+	renice 10 $$ >/dev/null 2>&1 || true
+	ionice -c3 -p $$ >/dev/null 2>&1 || true
+	flock -xn "${_file_lock}" apt-get -s -o Debug::NoLocking=true upgrade \
+		| grep -c ^Inst >"${_cache_file}" 2>/dev/null &
+}
+
+function __updates_available_icon__ {
+	if [[ -f "${_cache_icon}" ]]; then
+		cat "${_cache_icon}"
+	fi
+}
+
+# Copy this function to your bashrc and add $(__updates_icon__) to PS1
+function __updates_icon__ {
+	if [[ -x $HOME/bin/update-notifier ]]; then
+		$HOME/bin/update-notifier
+	fi
+}
 
 #-----------------------------------
 # Get some basic options
 # - [ ] refactor: rewrite options using getopt (refactor-options-getopt)
-shopt -s extglob
+#shopt -s extglob
 case "${1:-}" in
 #	(-d|--debug) __debugger__ ;;
 	(-h|--help) __show_help__ ; exit 2 ;;
-	(-p|--print-updates) __print_updates__ "${_cache_file}" ;;
-	(-u|--update-cache) __update_cache__ "${_cache_file}";;
+	(-i|--create-icon) __create_icon__ ;;
+	(-u|--update-cache) __update_cache__ ;;
 	(-*|--*)  printf "%b\n" ""${_script_name}": Option \""${1:-}"\" not recognized."  1>&2 ; __show_help__ ; exit 2  1>&2 ;;
 	#('') printf "%b\n" ""${_script_name}": Argument required." 1>&2 ; __show_help__ ; exit 2  1>&2 ;;
-	(*) _arg="${1:-}"
+	#(*) _arg="${1:-}"
+	(*) __updates_available__ && __updates_available_icon__
 esac

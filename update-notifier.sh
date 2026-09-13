@@ -120,6 +120,8 @@ function __check_cache__ {
 }
 
 function __update_cache__ {
+
+	printf "[updates:...]" > "${_cache_icon}"
 	local _file_lock="${_cache_file}.lock"
 	renice 10 $$ >/dev/null 2>&1 || true
 	ionice -c3 -p $$ >/dev/null 2>&1 || true

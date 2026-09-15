@@ -2,9 +2,9 @@
 
 # shellcheck disable=SC2317
 function debug {
-export PS4='+ [${BASH_SOURCE[0]}:${LINENO}]: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
-set -x
-exec > >(tee debug) 2>&1
+	export PS4='+ [${BASH_SOURCE[0]}:${LINENO}]: ${FUNCNAME[0]:+${FUNCNAME[0]}(): }'
+	set -x
+	exec > >(tee debug) 2>&1
 }
 
 #debug
@@ -44,6 +44,14 @@ Examples:
 EOF
 
 exit 2
+}
+
+# Install this script to $HOME/bin
+# Copy this function to $HOME/.bashrc and add $(__updates_icon__) to PS1
+function __updates_icon__ {
+	if [[ -x $HOME/bin/update-notifier ]]; then
+		$HOME/bin/update-notifier
+	fi
 }
 
 #-----------------------------------
@@ -104,8 +112,8 @@ function __check_cache__ {
 	# Checks if the cache file needs an update
 	# If the cache file doesn't exist, create it
 	if [[ ! -e "${_cache_file}" ]]; then
-	      __update_cache__
-	# else check the mtime of these files
+		__update_cache__
+		# else check the mtime of these files
 	else
 		d0=$(($(stat -c %Y "${_cache_file}" 2>/dev/null)-5))
 		d1=$(stat -c %Y /var/lib/apt)
@@ -128,20 +136,13 @@ function __update_cache__ {
 	ionice -c3 -p $$ >/dev/null 2>&1 || true
 	flock -xn "${_file_lock}" apt-get -s -o Debug::NoLocking=true upgrade \
 		| grep -c ^Inst > "${_cache_file}" 2>/dev/null &
-}
+	}
 
-function __updates_available_icon__ {
-	if [[ -r "${_cache_icon}" ]]; then
-		cat "${_cache_icon}"
-	fi
-}
-
-# Copy this function to your bashrc and add $(__updates_icon__) to PS1
-function __updates_icon__ {
-	if [[ -x $HOME/bin/update-notifier ]]; then
-		$HOME/bin/update-notifier
-	fi
-}
+	function __updates_available_icon__ {
+		if [[ -r "${_cache_icon}" ]]; then
+			cat "${_cache_icon}"
+		fi
+	}
 
 #-----------------------------------
 # Get some basic options

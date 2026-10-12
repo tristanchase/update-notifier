@@ -129,7 +129,6 @@ function __check_cache__ {
 }
 
 function __update_cache__ {
-
 	printf "[updates:...]" > "${_cache_icon}"
 	local _file_lock="${_cache_file}.lock"
 	renice 10 $$ >/dev/null 2>&1 || true
@@ -138,11 +137,11 @@ function __update_cache__ {
 		| grep -c ^Inst > "${_cache_file}" 2>/dev/null &
 	}
 
-	function __updates_available_icon__ {
-		if [[ -r "${_cache_icon}" ]]; then
-			cat "${_cache_icon}"
-		fi
-	}
+function __updates_available_icon__ {
+	if [[ -r "${_cache_icon}" ]]; then
+		cat "${_cache_icon}"
+	fi
+}
 
 #-----------------------------------
 # Get some basic options

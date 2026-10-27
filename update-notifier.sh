@@ -133,8 +133,13 @@ function __update_cache__ {
 	local _file_lock="${_cache_file}.lock"
 	renice 10 $$ >/dev/null 2>&1 || true
 	ionice -c3 -p $$ >/dev/null 2>&1 || true
-	flock -xn "${_file_lock}" apt-get -s -o Debug::NoLocking=true upgrade \
-		| grep -c ^Inst > "${_cache_file}" 2>/dev/null &
+	#-----------------------------------
+	# Experimenting here. Maybe aptitude will catch things that apt-get
+	# doesn't pick up on the first round...
+	#-----------------------------------
+	#flock -xn "${_file_lock}" apt-get -s -o Debug::NoLocking=true upgrade \
+		#| grep -c ^Inst > "${_cache_file}" 2>/dev/null &
+	aptitude search ~U | grep -c ^i > "${_cache_file}" 2>/dev/null &
 	}
 
 function __updates_available_icon__ {

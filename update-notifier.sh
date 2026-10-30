@@ -130,13 +130,16 @@ function __check_cache__ {
 
 function __update_cache__ {
 	printf "[updates:...]" > "${_cache_icon}"
-	local _file_lock="${_cache_file}.lock"
-	renice 10 $$ >/dev/null 2>&1 || true
-	ionice -c3 -p $$ >/dev/null 2>&1 || true
-	#-----------------------------------
+	#local _file_lock="${_cache_file}.lock"
+	#renice 10 $$ >/dev/null 2>&1 || true
+	#ionice -c3 -p $$ >/dev/null 2>&1 || true
+	# ---------------------------------------------------------------------------
 	# Experimenting here. Maybe aptitude will catch things that apt-get
 	# doesn't pick up on the first round...
-	#-----------------------------------
+	#
+	# It doesn't. We need to have an apt(-get|itiude) update first. Set as an hourly crontab via
+	# sudo crontab -e
+	# ---------------------------------------------------------------------------
 	#flock -xn "${_file_lock}" apt-get -s -o Debug::NoLocking=true upgrade \
 		#| grep -c ^Inst > "${_cache_file}" 2>/dev/null &
 	aptitude search ~U | grep -c ^i > "${_cache_file}" 2>/dev/null &
